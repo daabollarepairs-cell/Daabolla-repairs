@@ -1,0 +1,1496 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f766e">
+  <meta name="application-name" content="Returns Dashboard">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Returns Dashboard">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Returns Dashboard</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="pwa-icon.svg">
+  <link rel="apple-touch-icon" href="pwa-icon-192.png">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f8fb;
+      --panel: #ffffff;
+      --ink: #17202a;
+      --muted: #667085;
+      --border: #d9e0e8;
+      --border-strong: #b9c4d0;
+      --accent: #0f766e;
+      --accent-soft: #d9f2ef;
+      --accent-2: #c2410c;
+      --accent-2-soft: #ffedd5;
+      --good: #15803d;
+      --warn: #b45309;
+      --danger: #b42318;
+      --shadow: 0 12px 30px rgba(30, 41, 59, 0.08);
+      --radius: 8px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      background: var(--panel);
+      color: var(--ink);
+      cursor: pointer;
+      min-height: 40px;
+      padding: 0.5rem 0.75rem;
+      transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+    }
+
+    button:hover {
+      border-color: var(--accent);
+    }
+
+    button:disabled {
+      color: var(--muted);
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    .primary-button {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    .primary-button:hover {
+      background: #0b625c;
+      color: #ffffff;
+    }
+
+    .ghost-button {
+      background: transparent;
+    }
+
+    input,
+    select {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #ffffff;
+      color: var(--ink);
+      padding: 0.52rem 0.65rem;
+    }
+
+    input:focus,
+    select:focus,
+    button:focus-visible {
+      outline: 3px solid rgba(15, 118, 110, 0.22);
+      outline-offset: 1px;
+    }
+
+    label {
+      display: grid;
+      gap: 0.35rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .app-shell {
+      width: min(1480px, 100%);
+      margin: 0 auto;
+      padding: 1.2rem;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .title-block {
+      min-width: 0;
+    }
+
+    h1,
+    h2 {
+      margin: 0;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: clamp(1.55rem, 3vw, 2.25rem);
+      line-height: 1.1;
+    }
+
+    h2 {
+      font-size: 1.02rem;
+      line-height: 1.2;
+    }
+
+    .subhead,
+    .status-line {
+      color: var(--muted);
+      margin-top: 0.35rem;
+    }
+
+    .status-line {
+      min-height: 1.4rem;
+    }
+
+    .top-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.55rem;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .summary-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.95rem;
+      min-width: 0;
+      box-shadow: var(--shadow);
+    }
+
+    .summary-card .label {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .summary-card .value {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: clamp(1.7rem, 4vw, 2.55rem);
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .summary-card .meta {
+      display: block;
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-top: 0.45rem;
+      min-height: 1.1rem;
+      overflow-wrap: anywhere;
+    }
+
+    .accent-card {
+      border-color: rgba(15, 118, 110, 0.32);
+      background: linear-gradient(180deg, #ffffff 0%, var(--accent-soft) 190%);
+    }
+
+    .orange-card {
+      border-color: rgba(194, 65, 12, 0.25);
+      background: linear-gradient(180deg, #ffffff 0%, var(--accent-2-soft) 190%);
+    }
+
+    .filter-panel,
+    .data-panel,
+    .analytics-panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .filter-panel {
+      padding: 0.9rem;
+      margin-bottom: 1rem;
+    }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 0.75rem;
+      align-items: end;
+    }
+
+    .filter-grid .wide {
+      grid-column: span 2;
+    }
+
+    .filter-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: end;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 1rem;
+    }
+
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+    }
+
+    .analytics-panel {
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.85rem 0.95rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-header .muted {
+      color: var(--muted);
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    .rank-list {
+      display: grid;
+      gap: 0.7rem;
+      padding: 0.95rem;
+    }
+
+    .rank-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .rank-label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 700;
+    }
+
+    .rank-count {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .bar-track {
+      grid-column: 1 / -1;
+      height: 8px;
+      background: #edf1f5;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      min-width: 3px;
+      background: var(--accent);
+      border-radius: inherit;
+    }
+
+    .chart-wrap {
+      padding: 0.8rem 0.95rem 1rem;
+    }
+
+    .trend-chart {
+      display: block;
+      width: 100%;
+      height: auto;
+      min-height: 240px;
+    }
+
+    .empty-state {
+      padding: 1rem;
+      color: var(--muted);
+    }
+
+    .data-panel {
+      overflow: hidden;
+    }
+
+    .table-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+      padding: 0.85rem 0.95rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .table-toolbar-left,
+    .table-toolbar-right,
+    .pagination {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+    }
+
+    .table-toolbar-right label {
+      grid-auto-flow: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1180px;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--border);
+      padding: 0.68rem 0.75rem;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f9fafb;
+      color: #344054;
+      font-size: 0.78rem;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    th button {
+      width: 100%;
+      min-height: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: inherit;
+      padding: 0;
+      text-align: left;
+      font-size: inherit;
+      font-weight: 800;
+    }
+
+    th button:hover {
+      color: var(--accent);
+    }
+
+    tbody tr:hover {
+      background: #fbfcfd;
+    }
+
+    td {
+      color: #263241;
+      max-width: 260px;
+      overflow-wrap: anywhere;
+    }
+
+    .reason-cell {
+      min-width: 220px;
+    }
+
+    .link-cell a {
+      color: var(--accent);
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .link-cell a:hover {
+      text-decoration: underline;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      max-width: 100%;
+      border-radius: 999px;
+      padding: 0.18rem 0.52rem;
+      background: #eef6ff;
+      color: #175cd3;
+      font-size: 0.78rem;
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 0.82rem;
+      padding: 0.8rem 0.95rem;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 1120px) {
+      .summary-grid,
+      .analytics-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .filter-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .filter-grid .wide {
+        grid-column: span 1;
+      }
+
+      .analytics-grid .analytics-panel:last-child {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .app-shell {
+        padding: 0.85rem;
+      }
+
+      .topbar,
+      .table-toolbar {
+        display: grid;
+      }
+
+      .top-actions,
+      .table-toolbar-left,
+      .table-toolbar-right {
+        justify-content: stretch;
+      }
+
+      .top-actions button,
+      .table-toolbar-right label,
+      .filter-actions button {
+        width: 100%;
+      }
+
+      .summary-grid,
+      .analytics-grid,
+      .filter-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .filter-actions {
+        display: grid;
+      }
+
+      .panel-header {
+        display: grid;
+      }
+
+      .panel-header .muted {
+        white-space: normal;
+      }
+
+      .table-wrap {
+        overflow: visible;
+        padding: 0.75rem;
+      }
+
+      table {
+        min-width: 0;
+      }
+
+      thead {
+        display: none;
+      }
+
+      table,
+      tbody,
+      tr,
+      td {
+        display: block;
+        width: 100%;
+      }
+
+      tbody {
+        display: grid;
+        gap: 0.8rem;
+      }
+
+      tbody tr {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: #ffffff;
+        padding: 0.3rem 0.75rem;
+      }
+
+      tbody tr:hover {
+        background: #ffffff;
+      }
+
+      td {
+        display: grid;
+        grid-template-columns: minmax(112px, 36%) minmax(0, 1fr);
+        gap: 0.8rem;
+        max-width: none;
+        border-bottom: 1px solid #edf1f5;
+        padding: 0.58rem 0;
+      }
+
+      td:last-child {
+        border-bottom: 0;
+      }
+
+      td::before {
+        content: attr(data-label);
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 800;
+      }
+
+      .footer-note {
+        padding-top: 0.25rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <noscript>This dashboard needs JavaScript enabled to read the ReturnsRecord sheet.</noscript>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="title-block">
+        <h1>Returns Dashboard</h1>
+        <div class="subhead">ReturnsRecord • Europe/Warsaw</div>
+        <div id="statusLine" class="status-line" aria-live="polite">Loading sheet data...</div>
+      </div>
+      <div class="top-actions">
+        <button id="refreshButton" class="primary-button" type="button">Refresh</button>
+        <button id="resetButton" class="ghost-button" type="button">Reset filters</button>
+      </div>
+    </header>
+
+    <section class="summary-grid" aria-label="Return summary">
+      <article class="summary-card accent-card">
+        <span class="label">Returns today</span>
+        <strong id="todayCount" class="value">0</strong>
+        <span id="todayMeta" class="meta">Warsaw date</span>
+      </article>
+      <article class="summary-card">
+        <span class="label">W naprawie</span>
+        <strong id="repairCount" class="value">0</strong>
+        <span class="meta">Marketplace status</span>
+      </article>
+      <article class="summary-card orange-card">
+        <span class="label">W serwisie zewnętrznym</span>
+        <strong id="externalRepairCount" class="value">0</strong>
+        <span class="meta">Marketplace status</span>
+      </article>
+      <article class="summary-card">
+        <span class="label">Matching returns</span>
+        <strong id="filteredCount" class="value">0</strong>
+        <span id="filteredMeta" class="meta">All loaded rows</span>
+      </article>
+    </section>
+
+    <section class="filter-panel" aria-label="Filters">
+      <div class="filter-grid">
+        <label>
+          Date from
+          <input id="dateFrom" type="date" autocomplete="off">
+        </label>
+        <label>
+          Date to
+          <input id="dateTo" type="date" autocomplete="off">
+        </label>
+        <label class="wide">
+          Customer name
+          <input id="customerFilter" type="search" autocomplete="off" placeholder="Name or surname">
+        </label>
+        <label>
+          Marketplace status
+          <select id="statusFilter">
+            <option value="">All statuses</option>
+          </select>
+        </label>
+        <label>
+          Physical status
+          <select id="physicalFilter">
+            <option value="">All physical statuses</option>
+          </select>
+        </label>
+        <label class="wide">
+          Reason keyword
+          <input id="reasonFilter" type="search" autocomplete="off" placeholder="screen, battery, crack">
+        </label>
+        <div class="filter-actions">
+          <button id="clearDatesButton" class="ghost-button" type="button">Clear dates</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="content-grid">
+      <section class="analytics-grid" aria-label="Analytics">
+        <article class="analytics-panel">
+          <div class="panel-header">
+            <h2>Top Reasons</h2>
+            <span id="reasonPanelMeta" class="muted">Filtered</span>
+          </div>
+          <div id="topReasons" class="rank-list"></div>
+        </article>
+
+        <article class="analytics-panel">
+          <div class="panel-header">
+            <h2>Top Marketplaces</h2>
+            <span id="marketPanelMeta" class="muted">Filtered</span>
+          </div>
+          <div id="topMarkets" class="rank-list"></div>
+        </article>
+
+        <article class="analytics-panel">
+          <div class="panel-header">
+            <h2>Returns Trend</h2>
+            <span id="trendMeta" class="muted">Filtered</span>
+          </div>
+          <div id="trendChart" class="chart-wrap"></div>
+        </article>
+      </section>
+
+      <section class="data-panel" aria-label="Return records">
+        <div class="table-toolbar">
+          <div class="table-toolbar-left">
+            <h2>Return Records</h2>
+            <span id="pageSummary" class="status-line">No rows yet</span>
+          </div>
+          <div class="table-toolbar-right">
+            <label>
+              Rows
+              <select id="pageSize">
+                <option value="10">10</option>
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </label>
+            <nav class="pagination" aria-label="Pagination">
+              <button id="prevPage" type="button">Previous</button>
+              <button id="nextPage" type="button">Next</button>
+            </nav>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr id="tableHead"></tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+        <div id="tableNote" class="footer-note"></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const SHEET_ID = '1bFiGJjn1bE1f7Ipmg1kY7r-e95_U0Ovk9ndZMOZGyRk';
+    const SHEET_NAME = 'ReturnsRecord';
+    const QUERY = 'select A,B,C,D,E,F,G,H,I,J,K,L,M';
+    const STATUS_REPAIR = 'W naprawie';
+    const STATUS_EXTERNAL_REPAIR = 'W serwisie zewnętrznym';
+
+    const ROW_CACHE_KEY = 'returns-dashboard-rows-v1';
+
+    registerServiceWorker();
+
+    const COLUMNS = [
+      { key: 'mainDate', label: 'Main Return Date', type: 'date' },
+      { key: 'systemOrder', label: 'System Order No.', type: 'text' },
+      { key: 'marketplace', label: 'Marketplace', type: 'text' },
+      { key: 'purchaseDate', label: 'Purchase Date', type: 'date' },
+      { key: 'marketplaceOrder', label: 'Marketplace Order No.', type: 'text' },
+      { key: 'customer', label: 'Customer', type: 'text' },
+      { key: 'claimDate', label: 'Claim Ticket Date', type: 'date' },
+      { key: 'status', label: 'Marketplace Status', type: 'text' },
+      { key: 'reason', label: 'Reason for Return', type: 'text', className: 'reason-cell' },
+      { key: 'price', label: 'Total Price', type: 'number' },
+      { key: 'physicalStatus', label: 'Physical Status / Location', type: 'text' },
+      { key: 'orderLink', label: 'Order Link', type: 'link', className: 'link-cell' },
+      { key: 'addedDate', label: 'Date Added', type: 'date' }
+    ];
+
+    const els = {
+      statusLine: document.getElementById('statusLine'),
+      refreshButton: document.getElementById('refreshButton'),
+      resetButton: document.getElementById('resetButton'),
+      clearDatesButton: document.getElementById('clearDatesButton'),
+      todayCount: document.getElementById('todayCount'),
+      todayMeta: document.getElementById('todayMeta'),
+      repairCount: document.getElementById('repairCount'),
+      externalRepairCount: document.getElementById('externalRepairCount'),
+      filteredCount: document.getElementById('filteredCount'),
+      filteredMeta: document.getElementById('filteredMeta'),
+      dateFrom: document.getElementById('dateFrom'),
+      dateTo: document.getElementById('dateTo'),
+      customerFilter: document.getElementById('customerFilter'),
+      statusFilter: document.getElementById('statusFilter'),
+      physicalFilter: document.getElementById('physicalFilter'),
+      reasonFilter: document.getElementById('reasonFilter'),
+      reasonPanelMeta: document.getElementById('reasonPanelMeta'),
+      marketPanelMeta: document.getElementById('marketPanelMeta'),
+      trendMeta: document.getElementById('trendMeta'),
+      topReasons: document.getElementById('topReasons'),
+      topMarkets: document.getElementById('topMarkets'),
+      trendChart: document.getElementById('trendChart'),
+      tableHead: document.getElementById('tableHead'),
+      tableBody: document.getElementById('tableBody'),
+      pageSize: document.getElementById('pageSize'),
+      pageSummary: document.getElementById('pageSummary'),
+      prevPage: document.getElementById('prevPage'),
+      nextPage: document.getElementById('nextPage'),
+      tableNote: document.getElementById('tableNote')
+    };
+
+    const state = {
+      rows: [],
+      filteredRows: [],
+      sortKey: 'mainDate',
+      sortDirection: 'desc',
+      page: 1,
+      pageSize: Number(els.pageSize.value),
+      loading: false,
+      lastLoadedAt: null
+    };
+
+    renderTableHead();
+    bindEvents();
+    loadSheetData();
+
+    function registerServiceWorker() {
+      if (!('serviceWorker' in navigator)) return;
+
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+      });
+    }
+
+    function bindEvents() {
+      els.refreshButton.addEventListener('click', loadSheetData);
+      els.resetButton.addEventListener('click', resetFilters);
+      els.clearDatesButton.addEventListener('click', () => {
+        els.dateFrom.value = '';
+        els.dateTo.value = '';
+        state.page = 1;
+        applyFiltersAndRender();
+      });
+
+      [els.dateFrom, els.dateTo, els.statusFilter, els.physicalFilter].forEach((el) => {
+        el.addEventListener('change', () => {
+          state.page = 1;
+          applyFiltersAndRender();
+        });
+      });
+
+      const debouncedFilter = debounce(() => {
+        state.page = 1;
+        applyFiltersAndRender();
+      }, 160);
+
+      [els.customerFilter, els.reasonFilter].forEach((el) => {
+        el.addEventListener('input', debouncedFilter);
+      });
+
+      els.pageSize.addEventListener('change', () => {
+        state.pageSize = Number(els.pageSize.value);
+        state.page = 1;
+        renderResults();
+      });
+
+      els.prevPage.addEventListener('click', () => {
+        state.page = Math.max(1, state.page - 1);
+        renderResults();
+      });
+
+      els.nextPage.addEventListener('click', () => {
+        const totalPages = getTotalPages();
+        state.page = Math.min(totalPages, state.page + 1);
+        renderResults();
+      });
+    }
+
+    function loadSheetData() {
+      if (state.loading) return;
+
+      setLoading(true);
+      els.statusLine.textContent = 'Loading sheet data...';
+
+      const handlerName = `returnsSheetHandler_${Date.now()}`;
+      const timeoutId = window.setTimeout(() => {
+        cleanupJsonp(handlerName, script);
+        showLoadFailure('The Google Sheet took too long to respond. Try refreshing.');
+      }, 30000);
+
+      window[handlerName] = (response) => {
+        window.clearTimeout(timeoutId);
+        cleanupJsonp(handlerName, script);
+        handleSheetResponse(response);
+      };
+
+      const script = document.createElement('script');
+      const params = new URLSearchParams({
+        sheet: SHEET_NAME,
+        tq: QUERY,
+        tqx: `out:json;responseHandler:${handlerName}`,
+        cacheBust: String(Date.now())
+      });
+      script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?${params.toString()}`;
+      script.async = true;
+      script.onerror = () => {
+        window.clearTimeout(timeoutId);
+        cleanupJsonp(handlerName, script);
+        showLoadFailure('Unable to load the Google Sheet. Check that the sheet is public.');
+      };
+      document.head.appendChild(script);
+    }
+
+    function cleanupJsonp(handlerName, script) {
+      try {
+        delete window[handlerName];
+      } catch (error) {
+        window[handlerName] = undefined;
+      }
+      if (script && script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+    }
+
+    function handleSheetResponse(response) {
+      setLoading(false);
+
+      if (!response || response.status !== 'ok' || !response.table) {
+        const message = response && response.errors && response.errors[0] && response.errors[0].detailed_message;
+        showError(message || 'Google Sheets returned an unexpected response.');
+        return;
+      }
+
+      const rows = response.table.rows
+        .map(normalizeRow)
+        .filter((row) => row._hasData);
+
+      state.rows = rows;
+      state.lastLoadedAt = new Date();
+      state.page = 1;
+      cacheRows(rows, state.lastLoadedAt);
+
+      populateSelect(els.statusFilter, uniqueValues(rows, 'status'), 'All statuses');
+      populateSelect(els.physicalFilter, uniqueValues(rows, 'physicalStatus'), 'All physical statuses');
+      renderSummaryCards();
+      applyFiltersAndRender();
+      els.statusLine.textContent = `Loaded ${formatNumber(rows.length)} rows at ${formatTime(state.lastLoadedAt)}.`;
+    }
+
+    function showLoadFailure(message) {
+      setLoading(false);
+
+      const cached = readCachedRows();
+      if (!cached) {
+        showError(message);
+        return;
+      }
+
+      state.rows = cached.rows;
+      state.lastLoadedAt = cached.loadedAt;
+      state.page = 1;
+
+      populateSelect(els.statusFilter, uniqueValues(cached.rows, 'status'), 'All statuses');
+      populateSelect(els.physicalFilter, uniqueValues(cached.rows, 'physicalStatus'), 'All physical statuses');
+      renderSummaryCards();
+      applyFiltersAndRender();
+
+      const cachedAt = cached.loadedAt ? formatDateTime(cached.loadedAt) : 'a previous visit';
+      els.statusLine.textContent = `${message} Showing cached data from ${cachedAt}.`;
+    }
+
+    function normalizeRow(row, index) {
+      const cells = row.c || [];
+      const record = { _index: index };
+
+      COLUMNS.forEach((column, columnIndex) => {
+        record[column.key] = cleanText(cellDisplayValue(cells[columnIndex]));
+      });
+
+      return enrichRow(record, index);
+    }
+
+    function enrichRow(record, index) {
+      record._index = index;
+      record._mainDateTime = isoToTime(record.mainDate);
+      record._purchaseDateTime = isoToTime(record.purchaseDate);
+      record._claimDateTime = isoToTime(record.claimDate);
+      record._addedDateTime = isoToTime(record.addedDate);
+      record._customerNorm = normalizeText(record.customer);
+      record._reasonNorm = normalizeText(record.reason);
+      record._statusNorm = normalizeText(record.status);
+      record._physicalNorm = normalizeText(record.physicalStatus);
+      record._marketNorm = normalizeText(record.marketplace);
+      record._priceValue = parseNumber(record.price);
+      record._hasData = COLUMNS.some((column) => record[column.key] !== '');
+
+      return record;
+    }
+
+    function cacheRows(rows, loadedAt) {
+      try {
+        const payload = {
+          loadedAt: loadedAt.toISOString(),
+          rows: rows.map((row) => {
+            const item = {};
+            COLUMNS.forEach((column) => {
+              item[column.key] = row[column.key] || '';
+            });
+            return item;
+          })
+        };
+        window.localStorage.setItem(ROW_CACHE_KEY, JSON.stringify(payload));
+      } catch (error) {
+        // Private browsing or storage limits should not block the live dashboard.
+      }
+    }
+
+    function readCachedRows() {
+      try {
+        const raw = window.localStorage.getItem(ROW_CACHE_KEY);
+        if (!raw) return null;
+
+        const payload = JSON.parse(raw);
+        if (!payload || !Array.isArray(payload.rows)) return null;
+
+        const loadedAt = payload.loadedAt ? new Date(payload.loadedAt) : null;
+        const rows = payload.rows
+          .map((row, index) => enrichRow({ ...row }, index))
+          .filter((row) => row._hasData);
+
+        if (!rows.length) return null;
+        return {
+          loadedAt: loadedAt && Number.isFinite(loadedAt.getTime()) ? loadedAt : null,
+          rows
+        };
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function cellDisplayValue(cell) {
+      if (!cell) return '';
+      if (cell.f !== undefined && cell.f !== null) return String(cell.f);
+      if (cell.v === undefined || cell.v === null) return '';
+      if (typeof cell.v === 'string' && cell.v.startsWith('Date(')) return googleDateToIso(cell.v);
+      return String(cell.v);
+    }
+
+    function googleDateToIso(value) {
+      const match = /^Date\((\d{4}),(\d{1,2}),(\d{1,2})\)$/.exec(value);
+      if (!match) return value;
+      const year = Number(match[1]);
+      const month = Number(match[2]) + 1;
+      const day = Number(match[3]);
+      return `${year}-${pad2(month)}-${pad2(day)}`;
+    }
+
+    function cleanText(value) {
+      return String(value || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function applyFiltersAndRender() {
+      const dateFrom = els.dateFrom.value;
+      const dateTo = els.dateTo.value;
+      const customerQuery = normalizeText(els.customerFilter.value);
+      const reasonQuery = normalizeText(els.reasonFilter.value);
+      const status = els.statusFilter.value;
+      const physical = els.physicalFilter.value;
+
+      state.filteredRows = state.rows.filter((row) => {
+        if (dateFrom && (!row.mainDate || row.mainDate < dateFrom)) return false;
+        if (dateTo && (!row.mainDate || row.mainDate > dateTo)) return false;
+        if (status && row.status !== status) return false;
+        if (physical && row.physicalStatus !== physical) return false;
+        if (customerQuery && !row._customerNorm.includes(customerQuery)) return false;
+        if (reasonQuery && !row._reasonNorm.includes(reasonQuery)) return false;
+        return true;
+      });
+
+      renderSummaryCards();
+      renderAnalytics();
+      renderResults();
+    }
+
+    function renderSummaryCards() {
+      const todayIso = getWarsawDateIso(new Date());
+      const todayCount = state.rows.reduce((count, row) => count + (row.mainDate === todayIso ? 1 : 0), 0);
+      const repairCount = state.rows.reduce((count, row) => count + (row.status === STATUS_REPAIR ? 1 : 0), 0);
+      const externalRepairCount = state.rows.reduce((count, row) => count + (row.status === STATUS_EXTERNAL_REPAIR ? 1 : 0), 0);
+
+      els.todayCount.textContent = formatNumber(todayCount);
+      els.todayMeta.textContent = todayIso;
+      els.repairCount.textContent = formatNumber(repairCount);
+      els.externalRepairCount.textContent = formatNumber(externalRepairCount);
+      els.filteredCount.textContent = formatNumber(state.filteredRows.length || 0);
+      els.filteredMeta.textContent = `${formatNumber(state.rows.length)} loaded rows`;
+    }
+
+    function renderAnalytics() {
+      const rows = state.filteredRows;
+      const reasonCounts = countBy(rows, (row) => row._reasonNorm, (row) => row.reason || 'No reason');
+      const marketCounts = countBy(rows, (row) => row._marketNorm, (row) => row.marketplace || 'No marketplace');
+
+      renderRankList(els.topReasons, reasonCounts, 8);
+      renderRankList(els.topMarkets, marketCounts, 8);
+      renderTrend(rows);
+
+      const label = `${formatNumber(rows.length)} rows`;
+      els.reasonPanelMeta.textContent = label;
+      els.marketPanelMeta.textContent = label;
+    }
+
+    function renderRankList(container, counts, limit) {
+      if (!counts.length) {
+        container.innerHTML = '<div class="empty-state">No matching data.</div>';
+        return;
+      }
+
+      const top = counts.slice(0, limit);
+      const max = top[0].count || 1;
+      container.innerHTML = top.map((item) => {
+        const width = Math.max(3, Math.round((item.count / max) * 100));
+        return `
+          <div class="rank-row" title="${escapeHtml(item.label)}">
+            <div class="rank-label">${escapeHtml(item.label)}</div>
+            <div class="rank-count">${formatNumber(item.count)}</div>
+            <div class="bar-track" aria-hidden="true">
+              <div class="bar-fill" style="width: ${width}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderTrend(rows) {
+      const datedRows = rows.filter((row) => row.mainDate);
+      if (!datedRows.length) {
+        els.trendMeta.textContent = 'No dates';
+        els.trendChart.innerHTML = '<div class="empty-state">No dated returns in the current filter.</div>';
+        return;
+      }
+
+      const times = datedRows.map((row) => row._mainDateTime).filter(Number.isFinite);
+      const minTime = Math.min(...times);
+      const maxTime = Math.max(...times);
+      const spanDays = Math.max(1, Math.round((maxTime - minTime) / 86400000));
+      const groupMode = spanDays > 730 ? 'month' : spanDays > 120 ? 'week' : 'day';
+      const groups = new Map();
+
+      datedRows.forEach((row) => {
+        const key = trendKey(row.mainDate, groupMode);
+        groups.set(key, (groups.get(key) || 0) + 1);
+      });
+
+      const points = Array.from(groups, ([label, count]) => ({ label, count }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+
+      els.trendMeta.textContent = `${groupModeLabel(groupMode)} • ${formatNumber(datedRows.length)} rows`;
+      els.trendChart.innerHTML = buildTrendSvg(points);
+    }
+
+    function buildTrendSvg(points) {
+      const width = 680;
+      const height = 250;
+      const pad = { left: 42, right: 18, top: 18, bottom: 36 };
+      const innerWidth = width - pad.left - pad.right;
+      const innerHeight = height - pad.top - pad.bottom;
+      const maxCount = Math.max(1, ...points.map((point) => point.count));
+      const baseY = pad.top + innerHeight;
+      const xFor = (index) => pad.left + (points.length === 1 ? innerWidth / 2 : (index / (points.length - 1)) * innerWidth);
+      const yFor = (count) => pad.top + innerHeight - (count / maxCount) * innerHeight;
+      const coords = points.map((point, index) => ({ ...point, x: xFor(index), y: yFor(point.count) }));
+      const linePath = coords.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ');
+      const areaPath = `${linePath} L ${coords[coords.length - 1].x.toFixed(1)} ${baseY} L ${coords[0].x.toFixed(1)} ${baseY} Z`;
+      const grid = [0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+        const y = pad.top + innerHeight - ratio * innerHeight;
+        const label = Math.round(maxCount * ratio);
+        return `
+          <line x1="${pad.left}" y1="${y.toFixed(1)}" x2="${width - pad.right}" y2="${y.toFixed(1)}" stroke="#e6ebf0" />
+          <text x="${pad.left - 10}" y="${(y + 4).toFixed(1)}" text-anchor="end" fill="#667085" font-size="11">${label}</text>
+        `;
+      }).join('');
+      const labelIndexes = uniqueNumberList([0, Math.floor((coords.length - 1) / 2), coords.length - 1]);
+      const xLabels = labelIndexes.map((index) => {
+        const point = coords[index];
+        return `<text x="${point.x.toFixed(1)}" y="${height - 10}" text-anchor="${index === 0 ? 'start' : index === coords.length - 1 ? 'end' : 'middle'}" fill="#667085" font-size="11">${escapeHtml(shortTrendLabel(point.label))}</text>`;
+      }).join('');
+      const dots = coords.length <= 80 ? coords.map((point) => `
+        <circle cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="3.3" fill="#0f766e">
+          <title>${escapeHtml(point.label)}: ${formatNumber(point.count)}</title>
+        </circle>
+      `).join('') : '';
+
+      return `
+        <svg class="trend-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Returns trend chart">
+          <rect x="0" y="0" width="${width}" height="${height}" fill="#ffffff"></rect>
+          ${grid}
+          <path d="${areaPath}" fill="rgba(15, 118, 110, 0.13)"></path>
+          <path d="${linePath}" fill="none" stroke="#0f766e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+          ${dots}
+          <line x1="${pad.left}" y1="${baseY}" x2="${width - pad.right}" y2="${baseY}" stroke="#b9c4d0"></line>
+          ${xLabels}
+        </svg>
+      `;
+    }
+
+    function renderTableHead() {
+      els.tableHead.innerHTML = COLUMNS.map((column) => `
+        <th scope="col" aria-sort="none">
+          <button type="button" data-sort="${column.key}">${escapeHtml(column.label)}</button>
+        </th>
+      `).join('');
+
+      els.tableHead.querySelectorAll('button[data-sort]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const key = button.dataset.sort;
+          if (state.sortKey === key) {
+            state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
+          } else {
+            state.sortKey = key;
+            state.sortDirection = COLUMNS.find((column) => column.key === key).type === 'date' ? 'desc' : 'asc';
+          }
+          state.page = 1;
+          renderResults();
+        });
+      });
+    }
+
+    function renderResults() {
+      const sorted = sortedRows(state.filteredRows);
+      state.filteredRows = sorted;
+
+      const totalPages = getTotalPages();
+      state.page = Math.min(Math.max(1, state.page), totalPages);
+
+      const startIndex = (state.page - 1) * state.pageSize;
+      const pageRows = sorted.slice(startIndex, startIndex + state.pageSize);
+
+      renderSortState();
+      renderTableRows(pageRows);
+      renderPagination(startIndex, pageRows.length, sorted.length, totalPages);
+    }
+
+    function renderSortState() {
+      const headers = Array.from(els.tableHead.querySelectorAll('th'));
+      headers.forEach((th) => th.setAttribute('aria-sort', 'none'));
+
+      const activeIndex = COLUMNS.findIndex((column) => column.key === state.sortKey);
+      if (activeIndex >= 0) {
+        headers[activeIndex].setAttribute('aria-sort', state.sortDirection === 'asc' ? 'ascending' : 'descending');
+      }
+
+      els.tableHead.querySelectorAll('button[data-sort]').forEach((button) => {
+        const baseLabel = COLUMNS.find((column) => column.key === button.dataset.sort).label;
+        const marker = button.dataset.sort === state.sortKey ? (state.sortDirection === 'asc' ? ' ↑' : ' ↓') : '';
+        button.textContent = `${baseLabel}${marker}`;
+      });
+    }
+
+    function renderTableRows(rows) {
+      if (!rows.length) {
+        els.tableBody.innerHTML = `
+          <tr>
+            <td colspan="${COLUMNS.length}">
+              <div class="empty-state">No returns match the current filters.</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      els.tableBody.innerHTML = rows.map((row) => `
+        <tr>
+          ${COLUMNS.map((column) => renderCell(row, column)).join('')}
+        </tr>
+      `).join('');
+    }
+
+    function renderCell(row, column) {
+      const value = row[column.key] || '';
+      const className = column.className ? ` class="${column.className}"` : '';
+      const label = escapeHtml(column.label);
+
+      if (column.type === 'link') {
+        const safeHref = safeUrl(value);
+        const content = safeHref
+          ? `<a href="${escapeHtml(safeHref)}" target="_blank" rel="noopener noreferrer">Open order</a>`
+          : '<span class="muted">No link</span>';
+        return `<td${className} data-label="${label}">${content}</td>`;
+      }
+
+      if (column.key === 'status' && value) {
+        return `<td${className} data-label="${label}"><span class="badge">${escapeHtml(value)}</span></td>`;
+      }
+
+      return `<td${className} data-label="${label}">${escapeHtml(value || '—')}</td>`;
+    }
+
+    function renderPagination(startIndex, rowCount, totalRows, totalPages) {
+      const showingStart = totalRows ? startIndex + 1 : 0;
+      const showingEnd = totalRows ? startIndex + rowCount : 0;
+      els.pageSummary.textContent = `${formatNumber(showingStart)}-${formatNumber(showingEnd)} of ${formatNumber(totalRows)}`;
+      els.prevPage.disabled = state.page <= 1 || totalRows === 0;
+      els.nextPage.disabled = state.page >= totalPages || totalRows === 0;
+      els.tableNote.textContent = totalRows
+        ? `Page ${formatNumber(state.page)} of ${formatNumber(totalPages)}. Sorted by ${COLUMNS.find((column) => column.key === state.sortKey).label}.`
+        : '';
+    }
+
+    function sortedRows(rows) {
+      const column = COLUMNS.find((item) => item.key === state.sortKey);
+      const direction = state.sortDirection === 'asc' ? 1 : -1;
+
+      return [...rows].sort((a, b) => {
+        let left;
+        let right;
+
+        if (column.type === 'date') {
+          left = a[`_${column.key}Time`] ?? isoToTime(a[column.key]);
+          right = b[`_${column.key}Time`] ?? isoToTime(b[column.key]);
+        } else if (column.type === 'number') {
+          left = a._priceValue;
+          right = b._priceValue;
+        } else {
+          left = normalizeText(a[column.key]);
+          right = normalizeText(b[column.key]);
+        }
+
+        if (!Number.isFinite(left) && typeof left === 'number') left = -Infinity;
+        if (!Number.isFinite(right) && typeof right === 'number') right = -Infinity;
+
+        if (left < right) return -1 * direction;
+        if (left > right) return 1 * direction;
+        return a._index - b._index;
+      });
+    }
+
+    function countBy(rows, keyFn, labelFn) {
+      const map = new Map();
+
+      rows.forEach((row) => {
+        const key = keyFn(row);
+        if (!key) return;
+        const existing = map.get(key);
+        if (existing) {
+          existing.count += 1;
+        } else {
+          map.set(key, { label: labelFn(row), count: 1 });
+        }
+      });
+
+      return Array.from(map.values())
+        .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+    }
+
+    function trendKey(isoDate, mode) {
+      if (mode === 'month') return isoDate.slice(0, 7);
+      if (mode === 'week') {
+        const date = new Date(`${isoDate}T00:00:00Z`);
+        const day = date.getUTCDay() || 7;
+        date.setUTCDate(date.getUTCDate() - day + 1);
+        return date.toISOString().slice(0, 10);
+      }
+      return isoDate;
+    }
+
+    function groupModeLabel(mode) {
+      if (mode === 'month') return 'Monthly';
+      if (mode === 'week') return 'Weekly';
+      return 'Daily';
+    }
+
+    function shortTrendLabel(label) {
+      return label.length === 7 ? label : label.slice(5);
+    }
+
+    function resetFilters() {
+      els.dateFrom.value = '';
+      els.dateTo.value = '';
+      els.customerFilter.value = '';
+      els.statusFilter.value = '';
+      els.physicalFilter.value = '';
+      els.reasonFilter.value = '';
+      state.page = 1;
+      applyFiltersAndRender();
+    }
+
+    function populateSelect(select, values, emptyLabel) {
+      const current = select.value;
+      select.innerHTML = `<option value="">${escapeHtml(emptyLabel)}</option>` + values
+        .map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)
+        .join('');
+      if (values.includes(current)) select.value = current;
+    }
+
+    function uniqueValues(rows, key) {
+      return Array.from(new Set(rows.map((row) => row[key]).filter(Boolean)))
+        .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    }
+
+    function getTotalPages() {
+      return Math.max(1, Math.ceil((state.filteredRows.length || 0) / state.pageSize));
+    }
+
+    function setLoading(isLoading) {
+      state.loading = isLoading;
+      els.refreshButton.disabled = isLoading;
+      els.refreshButton.textContent = isLoading ? 'Refreshing...' : 'Refresh';
+    }
+
+    function showError(message) {
+      els.statusLine.textContent = message;
+      els.tableBody.innerHTML = `
+        <tr>
+          <td colspan="${COLUMNS.length}">
+            <div class="empty-state">${escapeHtml(message)}</div>
+          </td>
+        </tr>
+      `;
+    }
+
+    function normalizeText(value) {
+      const polishMap = {
+        ą: 'a', ć: 'c', ę: 'e', ł: 'l', ń: 'n', ó: 'o', ś: 's', ź: 'z', ż: 'z'
+      };
+
+      return String(value || '')
+        .toLowerCase()
+        .replace(/[ąćęłńóśźż]/g, (char) => polishMap[char] || char)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\p{L}\p{N}]+/gu, ' ')
+        .trim();
+    }
+
+    function getWarsawDateIso(date) {
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Warsaw',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).formatToParts(date);
+
+      const lookup = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+      return `${lookup.year}-${lookup.month}-${lookup.day}`;
+    }
+
+    function isoToTime(value) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return NaN;
+      const [year, month, day] = value.split('-').map(Number);
+      return Date.UTC(year, month - 1, day);
+    }
+
+    function parseNumber(value) {
+      if (!value) return NaN;
+      const normalized = String(value)
+        .replace(/\s/g, '')
+        .replace(',', '.')
+        .replace(/[^\d.-]/g, '');
+      return Number(normalized);
+    }
+
+    function safeUrl(value) {
+      try {
+        const url = new URL(value);
+        return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+      } catch (error) {
+        return '';
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function formatNumber(value) {
+      return new Intl.NumberFormat('en-US').format(value || 0);
+    }
+
+    function formatTime(date) {
+      return new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Warsaw',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
+    }
+
+    function formatDateTime(date) {
+      return new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Warsaw',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
+    }
+
+    function debounce(fn, wait) {
+      let timer;
+      return (...args) => {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(() => fn(...args), wait);
+      };
+    }
+
+    function pad2(value) {
+      return String(value).padStart(2, '0');
+    }
+
+    function uniqueNumberList(values) {
+      return Array.from(new Set(values.filter((value) => Number.isInteger(value) && value >= 0)));
+    }
+  </script>
+</body>
+</html>
