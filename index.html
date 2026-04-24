@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard zwrotów laptopów</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --bg: #f5f7fa;
+      --card: #fff;
+      --text: #1f1f1f;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --primary-dark: #1e40af;
+    }
+    html, body { height: 100%; }
+    body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; background: var(--bg); color: var(--text); }
+    .container { max-width: 1200px; margin: 0 auto; padding: 16px; }
+
+    h1 { font-size: 1.4rem; margin: 12px 0 16px; }
+    .loading { text-align: center; padding: 40px 0; color: var(--muted); }
+    .hidden { display: none; }
+
+    /* Summary cards */
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .card { background: var(--card); border-radius: 12px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+    .card-label { font-size: .9rem; color: var(--muted); }
+    .card-value { font-size: 2rem; font-weight: 700; margin-top: 6px; }
+    .today { color: var(--primary); }
+
+    /* Filters */
+    .filters { background: #fff; border-radius: 12px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 20px; }
+    .filters h2 { font-size: .95rem; color: #555; margin: 6px 0 10px; }
+    .filter-row { display: flex; flex-wrap: wrap; gap: 12px; }
+    .filter { display: flex; flex-direction: column; min-width: 180px; }
+    .filter label { font-size: .8rem; color: #666; margin-bottom: 4px; }
+    .filter input, .filter select { padding: 9px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: .95rem; }
+    .filter input[type="text"] { background: #fff; }
+
+    .btn { background: var(--primary); color: #fff; border: none; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-size: .95rem; }
+    .btn.secondary { background: #6b7280; }
+
+    /* Analytics */
+    .analytics { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .chart-box { background: #fff; border-radius: 12px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+    .chart-box h3 { font-size: .95rem; color: #555; margin: 6px 0 8px; }
+    .chart-list { list-style: none; padding: 0; margin: 0; }
+    .chart-list li { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: .92rem; color: #333; }
+    .chart-list li:last-child { border-bottom: none; }
+    .trend { display: flex; align-items: flex-end; height: 180px; padding: 8px 0; gap: 4px; }
+    .bar { width: 100%; background: #3b82f6; border-radius: 6px 6px 0 0; }
+    .bar:hover { filter: brightness(0.95); }
+
+    /* Table */
+    .table-container { background: #fff; border-radius: 12px; padding: 0; box-shadow: 0 2px 8px rgba(0,0,0,.06); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+    thead th { background: #f8fafc; text-transform: uppercase; font-size: .7rem; letter-spacing: .04em; padding: 10px 12px; border-bottom: 1px solid #eee; cursor: pointer; }
+    tbody td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+    tbody tr:hover { background: #f7f7fb; }
+    .link { color: var(--primary); text-decoration: none; }
+    .link:hover { text-decoration: underline; }
+
+    .pagination { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-top: 1px solid #eee; background: #fff; }
+    .pagination-controls { display: flex; gap: 6px; }
+    .page-btn { padding: 6px 10px; border-radius: 6px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
+    .page-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    @media (max-width: 700px) {
+      .filter-row { flex-direction: column; }
+      .filter { width: 100%; min-width: auto; }
+      .trend { height: 140px; }
+      .card-value { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Dashboard zwrotów laptopów</h1>
+
+    <div id="loading" class="loading">Ładowanie danych z Google Sheets...</div>
+
+    <div id="app" class="hidden">
+      <!-- Summary cards -->
+      <div class="cards" aria-label="Podsumowanie">
+        <div class="card" title="Zwroty dzisiaj (Europa/Warszawa)">
+          <div class="card-label">Zwroty dzisiaj</div>
+          <div class="card-value today" id="todayCount">0</div>
+        </div>
+        <div class="card" title="Liczba zwrotów w naprawie">
+          <div class="card-label">W naprawie</div>
+          <div class="card-value" id="repairCount">0</div>
+        </div>
+        <div class="card" title="Zwroty w serwisie zewnętrznym">
+          <div class="card-label">W serwisie zewnętrznym</div>
+          <div class="card-value" id="externalCount">0</div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <section class="filters" aria-label="Filtry">
+        <h2>Filtry</h2>
+        <div class="filter-row" id="filtersRow">
+          <div class="filter">
+            <label>Data od (A)</label>
+            <input type="date" id="dateFrom" />
+          </div>
+          <div class="filter">
+            <label>Data do (A)</label>
+            <input type="date" id="dateTo" />
+          </div>
+          <div class="filter">
+            <label>Klient (F)</label>
+            <input type="text" id="customerName" placeholder="Wpisz nazwisko imię..." />
+          </div>
+          <div class="filter">
+            <label>Status na rynku (H)</label>
+            <select id="statusFilter">
+              <option value="">Wszystkie</option>
+            </select>
+          </div>
+          <div class="filter">
+            <label>Status fizyczny (K)</label>
+            <select id="physicalFilter">
+              <option value="">Wszystkie</option>
+            </select>
+          </div>
+          <div class="filter" style="min-width: 100%">
+            <label>Powód zwrotu (I)</label>
+            <input type="text" id="reasonSearch" placeholder="Słowo kluczowe (np. screen)" />
+          </div>
+          <div class="filter" style="display:flex; gap:6px; align-items:flex-end;">
+            <button class="btn" id="applyFilters" type="button" aria-label="Filtruj">Filtruj</button>
+            <button class="btn secondary" id="clearFilters" type="button" aria-label="Resetuj filtr">Wyczyść</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Analytics -->
+      <section class="analytics" aria-label="Analizy">
+        <div class="chart-box">
+          <h3>Top powody zwrotu (I)</h3>
+          <ul id="reasonsChart" class="chart-list"></ul>
+        </div>
+        <div class="chart-box">
+          <h3>Top marketplaces (C)</h3>
+          <ul id="marketplacesChart" class="chart-list"></ul>
+        </div>
+        <div class="chart-box" aria-label="Trend zwrotów">
+          <h3>Trend zwrotów – ostatnie 30 dni</h3>
+          <div class="trend" id="trendChart"></div>
+        </div>
+      </section>
+
+      <!-- Results table -->
+      <section class="table-container" aria-label="Wyniki">
+        <div style="overflow:auto;">
+          <table id="resultsTable" aria-label="Tabela zwrotów">
+            <thead>
+              <tr>
+                <th data-col="A">Data zwrotu</th>
+                <th data-col="B">Nr zwrotu</th>
+                <th data-col="C">Marketplace</th>
+                <th data-col="D">Data zakupu</th>
+                <th data-col="E">Nr sprawy</th>
+                <th data-col="F">Klient</th>
+                <th data-col="G">Data zgłoszenia</th>
+                <th data-col="H">Status</th>
+                <th data-col="I">Powód</th>
+                <th data-col="J">Cena</th>
+                <th data-col="K">Physical Status</th>
+                <th data-col="L">Link</th>
+                <th data-col="M">Dodano</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" aria-label="Paginacja">
+          <div id="paginationInfo" class="pagination-info" style="color:#555;">Pokazuję 0-0 z 0 wyników</div>
+          <div class="pagination-controls" id="paginationButtons"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // Columns A..M (as in prompt)
+    const COLUMNS = ['A','B','C','D','E','F','G','H','I','J','K','L','M'];
+
+    // Data state
+    let allData = [];        // all rows from sheet
+    let filteredData = [];     // after applying user filters
+    let currentPage = 1;
+    const PAGE_SIZE = 50;
+    let sortCol = 'A';
+    let sortAsc = false;
+
+    // Google Sheet (public) - use the ReturnsRecord sheet only
+    // If you publish to the web, this endpoint should work without API keys.
+    // Replace the URL below only if your sheet is different.
+    const SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1bFiGJjn1bE1f7Ipmg1kY7r-e95_U0Ovk9ndZMOZGyRk/gviz/tq?tqx=out:json&sheet=ReturnsRecord';
+
+    // Helpers
+    function dateToISO(d) {
+      if (!d) return '';
+      const dt = (d instanceof Date) ? d : new Date(d);
+      if (isNaN(dt)) return '';
+      return dt.toISOString().slice(0,10);
+    }
+
+    function todayWarsawISO() {
+      // Get today in Europe/Warsaw and return as YYYY-MM-DD
+      const str = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Warsaw' });
+      // en-CA returns YYYY-MM-DD
+      return str;
+    }
+
+    function dateEquals(a, b) {
+      const sa = dateToISO(a);
+      const sb = dateToISO(b);
+      return !!(sa && sb && sa === sb);
+    }
+
+    // Lightweight date parser for Sheets cells
+    // Accepts numeric (Excel-style), strings like YYYY-MM-DD, DD/MM/YYYY, etc.
+    function toDateFromSheetValue(v) {
+      if (v == null) return null;
+      if (v instanceof Date) return v;
+      if (typeof v === 'object' && v.v !== undefined) v = v.v;
+
+      if (typeof v === 'number') {
+        // Excel/Sheets serial date (base 1899-12-30)
+        const base = new Date(1899, 11, 30);
+        return new Date(base.getTime() + v * 86400000);
+      }
+      if (typeof v === 'string') {
+        // Try standard formats
+        const d = new Date(v);
+        if (!isNaN(d)) return d;
+        // dd/mm/yyyy
+        const m1 = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (m1) {
+          const dd = parseInt(m1[1], 10);
+          const mm = parseInt(m1[2], 10) - 1;
+          const yyyy = parseInt(m1[3], 10);
+          const dt = new Date(yyyy, mm, dd);
+          if (!isNaN(dt)) return dt;
+        }
+        // yyyy-mm-dd (explicit)
+        const m2 = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if (m2) {
+          const dt = new Date(parseInt(m2[1],10), parseInt(m2[2],10)-1, parseInt(m2[3],10));
+          if (!isNaN(dt)) return dt;
+        }
+      }
+      return null;
+    }
+
+    // Fetch data from Google Sheets (gviz JSON)
+    async function fetchData() {
+      const resp = await fetch(SPREADSHEET_URL);
+      const text = await resp.text();
+
+      // The response is something like: google.visualization.Query.setResponse({...})
+      const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]+)\)/);
+      if (!jsonMatch) throw new Error('Nieudane pobranie danych (format odpowiedzi nieoczekiwany).');
+      const data = JSON.parse(jsonMatch[1]);
+
+      // Build rows A..M from data.table.rows
+      const rowsRaw = data.table.rows || [];
+      const parsed = rowsRaw.map(row => {
+        const cells = row.c || [];
+        const obj = {};
+        // The data often has an offset: A at cells[1], B at cells[2], ... so we read i+1
+        for (let i = 0; i < COLUMNS.length; i++) {
+          const cell = cells[i + 1] ?? null;
+          const v = cell && 'v' in cell ? cell.v : null;
+          obj[COLUMNS[i]] = v;
+        }
+
+        // Convert date fields
+        obj.A = toDateFromSheetValue(obj.A);
+        obj.D = toDateFromSheetValue(obj.D);
+        obj.G = toDateFromSheetValue(obj.G);
+        obj.M = toDateFromSheetValue(obj.M);
+
+        // Normalize J (price) to number
+        if (obj.J === null || obj.J === undefined || obj.J === '') {
+          obj.J = 0;
+        } else if (typeof obj.J === 'string') {
+          const n = parseFloat(obj.J.replace(',', '.'));
+          obj.J = isNaN(n) ? 0 : n;
+        }
+
+        // Ensure others are strings as needed
+        obj.C = obj.C ?? '';
+        obj.F = obj.F ?? '';
+        obj.H = obj.H ?? '';
+        obj.I = obj.I ?? '';
+        obj.K = obj.K ?? '';
+        obj.L = obj.L ?? '';
+        // Tidy M
+        // M might be a date; keep as Date or null
+        return obj;
+      });
+
+      // Filter out completely empty rows (optional)
+      return parsed.filter(r => r.A || r.D || r.G || r.M || r.B);
+    }
+
+    function renderTable() {
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const end = start + PAGE_SIZE;
+      const pageRows = filteredData.slice(start, end);
+
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = pageRows.map(r => {
+        // Display values (A..M)
+        const rowDate = dateToISO(r.A);
+        const dA = r.A ? r.A : null;
+        const dD = r.D;
+        const dG = r.G;
+        const dM = r.M;
+
+        // Link for L
+        const link = (r.L && r.L.toString().trim()) ? `<a class="link" href="${r.L}" target="_blank" rel="noopener">Otwórz</a>` : '-';
+        return `
+          <tr>
+            <td>${r.A ? r.A.toISOString().slice(0,10) : '-'}</td>
+            <td>${r.B ?? '-'}</td>
+            <td>${r.C ?? '-'}</td>
+            <td>${r.D ? r.D.toISOString().slice(0,10) : '-'}</td>
+            <td>${r.E ?? '-'}</td>
+            <td>${r.F ?? '-'}</td>
+            <td>${r.G ? r.G.toISOString().slice(0,10) : '-'}</td>
+            <td>${r.H ?? '-'}</td>
+            <td>${r.I ?? '-'}</td>
+            <td>${r.J ?? '-'}</td>
+            <td>${r.K ?? '-'}</td>
+            <td>${link}</td>
+            <td>${r.M ? (r.M instanceof Date ? r.M.toISOString().slice(0,10) : '-') : '-'}</td>
+          </tr>
+        `;
+      }).join('');
+
+      const total = filteredData.length;
+      const from = total > 0 ? start + 1 : 0;
+      const to = Math.min(end, total);
+      document.getElementById('paginationInfo').textContent = `Pokazuję ${from}-${to} z ${total} wyników`;
+      renderPagination(total);
+    }
+
+    function renderPagination(total) {
+      const totalPages = Math.ceil(total / PAGE_SIZE);
+      const container = document.getElementById('paginationButtons');
+      if (totalPages <= 1) { container.innerHTML = ''; return; }
+
+      let html = '';
+      if (currentPage > 1) {
+        html += `<button class="page-btn" onclick="goToPage(1)" aria-label="Pierwsza">«</button>`;
+        html += `<button class="page-btn" onclick="goToPage(${currentPage - 1})" aria-label="Poprzednia">‹</button>`;
+      }
+
+      const maxVisible = 5;
+      let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+      let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+      if (endPage - startPage < maxVisible - 1) startPage = Math.max(1, endPage - maxVisible + 1);
+
+      for (let i = startPage; i <= endPage; i++) {
+        html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+      }
+
+      if (currentPage < totalPages) {
+        html += `<button class="page-btn" onclick="goToPage(${currentPage + 1})" aria-label="Następna">›</button>`;
+        html += `<button class="page-btn" onclick="goToPage(${totalPages})" aria-label="Ostatnia">»</button>`;
+      }
+
+      container.innerHTML = html;
+    }
+
+    function goToPage(n) {
+      currentPage = n;
+      renderTable();
+      document.querySelector('.table-container').scrollTop = 0;
+    }
+
+    // Filtering logic
+    function populateFilters() {
+      const statuses = new Set();
+      const physicals = new Set();
+      for (const r of allData) {
+        if (r.H) statuses.add(r.H);
+        if (r.K) physicals.add(r.K);
+      }
+      const st = document.getElementById('statusFilter');
+      const ph = document.getElementById('physicalFilter');
+      [...statuses].sort().forEach(v => {
+        const o = document.createElement('option');
+        o.value = v;
+        o.textContent = v;
+        st.appendChild(o);
+      });
+      [...physicals].sort().forEach(v => {
+        const o = document.createElement('option');
+        o.value = v;
+        o.textContent = v;
+        ph.appendChild(o);
+      });
+    }
+
+    // Analytics: top reasons, top marketplaces, 30-day trend
+    function updateAnalytics() {
+      // Top reasons
+      const reasons = {};
+      const markets = {};
+      const trend = {};
+      for (const r of filteredData) {
+        const reason = (r.I || '').toString().trim();
+        if (reason) reasons[reason] = (reasons[reason] || 0) + 1;
+        const market = r.C || '';
+        if (market) markets[market] = (markets[market] || 0) + 1;
+        if (r.A) {
+          const key = r.A.toISOString().slice(0,10);
+          trend[key] = (trend[key] || 0) + 1;
+        }
+      }
+
+      const topReasons = Object.entries(reasons).sort((a,b)=>b[1]-a[1]).slice(0, 10);
+      const topMarkets = Object.entries(markets).sort((a,b)=>b[1]-a[1]).slice(0, 10);
+
+      const reasonsEl = document.getElementById('reasonsChart');
+      reasonsEl.innerHTML = topReasons.map(([name, count]) => 
+        `<li><span class="name">${name}</span><span class="count">${count}</span></li>`
+      ).join('');
+
+      const marketsEl = document.getElementById('marketplacesChart');
+      marketsEl.innerHTML = topMarkets.map(([name, count]) => 
+        `<li><span class="name">${name}</span><span class="count">${count}</span></li>`
+      ).join('');
+
+      // Trend bars (30 dni)
+      const todayDate = new Date();
+      const last30 = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(todayDate);
+        d.setDate(d.getDate() - i);
+        last30.push(d.toISOString().slice(0,10));
+      }
+      const maxCount = Math.max(1, ...last30.map(d => trend[d] || 0));
+      const trendEl = document.getElementById('trendChart');
+      trendEl.innerHTML = last30.map(d => {
+        const count = trend[d] || 0;
+        const height = (count / maxCount) * 100;
+        // display date label below bars
+        const dayLabel = new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
+        return `<div class="bar" style="height:${height}%" title="${d} - ${count}"><span style="font-size:0.75rem; position:relative; top:6px; color:#555; transform: translateY(100%); display:block">${dayLabel}</span></div>`;
+      }).join('');
+    }
+
+    // Apply filters
+    function applyFilters() {
+      const dateFrom = document.getElementById('dateFrom').value;
+      const dateTo = document.getElementById('dateTo').value;
+      const customerName = document.getElementById('customerName').value.toLowerCase().trim();
+      const statusVal = document.getElementById('statusFilter').value;
+      const physicalVal = document.getElementById('physicalFilter').value;
+      const reasonQuery = document.getElementById('reasonSearch').value.toLowerCase().trim();
+
+      filteredData = allData.filter(r => {
+        // Date range on A
+        if (dateFrom || dateTo) {
+          const d = (r.A instanceof Date) ? r.A : null;
+          const iso = d ? d.toISOString().slice(0,10) : '';
+          if (dateFrom && iso < dateFrom) return false;
+          if (dateTo && iso > dateTo) return false;
+        }
+        // Customer name (F)
+        if (customerName && !(r.F && r.F.toString().toLowerCase().includes(customerName))) return false;
+        // Status H
+        if (statusVal && r.H !== statusVal) return false;
+        // Physical K
+        if (physicalVal && r.K !== physicalVal) return false;
+        // Reason I
+        if (reasonQuery && !(r.I && r.I.toLowerCase().includes(reasonQuery))) return false;
+        return true;
+      });
+
+      // Sort (default by A)
+      sortData();
+      currentPage = 1;
+      renderTable();
+      updateSummaryCards();
+      updateAnalytics();
+    }
+
+    function clearFilters() {
+      document.getElementById('dateFrom').value = '';
+      document.getElementById('dateTo').value = '';
+      document.getElementById('customerName').value = '';
+      document.getElementById('reasonSearch').value = '';
+      document.getElementById('statusFilter').value = '';
+      document.getElementById('physicalFilter').value = '';
+      filteredData = [...allData];
+      sortData();
+      currentPage = 1;
+      renderTable();
+      updateSummaryCards();
+      updateAnalytics();
+    }
+
+    // Sorting
+    function sortData() {
+      filteredData.sort((a, b) => {
+        let va = a[sortCol];
+        let vb = b[sortCol];
+        if (sortCol === 'A' || sortCol === 'D' || sortCol === 'G' || sortCol === 'M') {
+          va = (va instanceof Date) ? va.getTime() : 0;
+          vb = (vb instanceof Date) ? vb.getTime() : 0;
+        } else if (typeof va === 'number' && typeof vb === 'number') {
+          // ok
+        } else {
+          va = String(va ?? '').toLowerCase();
+          vb = String(vb ?? '').toLowerCase();
+        }
+        if (va < vb) return sortAsc ? -1 : 1;
+        if (va > vb) return sortAsc ? 1 : -1;
+        return 0;
+      });
+    }
+
+    // Init
+    async function init() {
+      try {
+        allData = await fetchData();
+        // Normalize some fields for safe display
+        filteredData = [...allData];
+
+        // Build filters (distinct options)
+        populateFilters();
+
+        // Initial render
+        sortCol = 'A';
+        sortAsc = false;
+        sortData();
+        renderTable();
+        updateSummaryCards();
+        updateAnalytics();
+
+        // Wire up UI
+        document.getElementById('applyFilters').addEventListener('click', applyFilters);
+        document.getElementById('clearFilters').addEventListener('click', clearFilters);
+        // Simple header-based sort (clickable columns)
+        document.querySelectorAll('th[data-col]').forEach(th => {
+          th.style.userSelect = 'none';
+          th.addEventListener('click', () => {
+            const col = th.getAttribute('data-col');
+            if (sortCol === col) sortAsc = !sortAsc;
+            else { sortCol = col; sortAsc = true; }
+            document.querySelectorAll('th').forEach(t => t.classList.remove('asc','desc'));
+            th.classList.toggle('asc', sortAsc);
+            th.classList.toggle('desc', !sortAsc);
+            sortData(); renderTable();
+          });
+        });
+
+        // UI ready
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+      } catch (err) {
+        document.getElementById('loading').textContent = 'Błąd ładowania danych: ' + err.message;
+      }
+    }
+
+    // Populate filter selects
+    function populateFilters() {
+      // We also populate statuses in the UI even if there are many duplicates
+      const statuses = new Set();
+      const physicals = new Set();
+      for (const r of allData) {
+        if (r.H) statuses.add(r.H);
+        if (r.K) physicals.add(r.K);
+      }
+      const st = document.getElementById('statusFilter');
+      const ph = document.getElementById('physicalFilter');
+      statuses = Array.from(statuses).sort();
+      physicals = Array.from(physicals).sort();
+      statuses.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; st.appendChild(o); });
+      physicals.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; ph.appendChild(o); });
+    }
+
+    // Summary cards
+    function updateSummaryCards() {
+      // Today (Warsaw)
+      const todayISO = todayWarsawISO();
+      const todayCount = filteredData.filter(r => r.A && dateToISO(r.A) === todayISO).length;
+      const inRepair = filteredData.filter(r => r.H === 'W naprawie').length;
+      const inExternal = filteredData.filter(r => r.H === 'W serwisie zewnętrznym').length;
+
+      document.getElementById('todayCount').textContent = todayCount;
+      document.getElementById('repairCount').textContent = inRepair;
+      document.getElementById('externalCount').textContent = inExternal;
+    }
+
+    // Start
+    init();
+  </script>
+</body>
+</html>
