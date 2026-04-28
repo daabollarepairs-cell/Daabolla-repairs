@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Returns Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+ .table-scroll { overflow-x: auto; }
+  th { cursor: pointer; user-select: none; }
+  th:hover { background: #f3f4f6; }
+ .sort-asc::after { content: " ▲"; font-size: 0.7em; }
+ .sort-desc::after { content: " ▼"; font-size: 0.7em; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+<div class="max-w-7xl mx-auto p-4 md:p-6">
+
+  <header class="mb-6">
+    <h1 class="text-2xl md:text-3xl font-bold">Returns Dashboard</h1>
+    <p class="text-sm text-gray-500">Live data from Google Sheets | Timezone: Europe/Warsaw</p>
+  </header>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-sm text-gray-500">Total Returns Today</div>
+      <div id="todayCount" class="text-3xl font-bold mt-1">-</div>
+      <div id="todayDate" class="text-xs text-gray-400 mt-1"></div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-sm text-gray-500">Filtered Results</div>
+      <div id="filteredCount" class="text-3xl font-bold mt-1">0</div>
+      <div class="text-xs text-gray-400 mt-1">rows match filters</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-sm text-gray-500">Last Updated</div>
+      <div id="lastUpdated" class="text-3xl font-bold mt-1">-</div>
+      <div class="text-xs text-gray-400 mt-1">refresh page to update</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="bg-white rounded-lg shadow p-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div>
+        <label class="text-sm font-medium">Date From</label>
+        <input type="date" id="dateFrom" class="w-full mt-1 border rounded px-2 py-1.5">
+      </div>
+      <div>
+        <label class="text-sm font-medium">Date To</label>
+        <input type="date" id="dateTo" class="w-full mt-1 border rounded px-2 py-1.5">
+      </div>
+      <div>
+        <label class="text-sm font-medium">Customer Name</label>
+        <input type="text" id="customerFilter" placeholder="e.g. Jan Kowalski" class="w-full mt-1 border rounded px-2 py-1.5">
+      </div>
+      <div>
+        <label class="text-sm font-medium">Reason Search</label>
+        <input type="text" id="reasonSearch" placeholder="e.g. screen" class="w-full mt-1 border rounded px-2 py-1.5">
+      </div>
+    </div>
+    <div class="mt-3 flex gap-2">
+      <button id="applyFilters" class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">Apply</button>
+      <button id="resetFilters" class="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300">Reset</button>
+    </div>
+  </div>
+
+  <!-- Analytics -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow p-4">
+      <h3 class="font-semibold mb-2">Top Return Reasons</h3>
+      <canvas id="reasonsChart"></canvas>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <h3 class="font-semibold mb-2">Top Marketplaces</h3>
+      <canvas id="marketplaceChart"></canvas>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <h3 class="font-semibold mb-2">Returns Trend</h3>
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Results Table -->
+  <div class="bg-white rounded-lg shadow">
+    <div class="p-4 border-b flex justify-between items-center">
+      <h3 class="font-semibold">All Returns</h3>
+      <div class="text-sm text-gray-500">
+        Page <span id="pageNum">1</span> of <span id="pageTotal">1</span>
+      </div>
+    <div class="table-scroll">
+      <table class="w-full text-sm" id="dataTable">
+        <thead class="bg-gray-50 border-b">
+          <tr>
+            <th class="text-left p-3" data-col="0">Main Return Date</th>
+            <th class="text-left p-3" data-col="1">Order # System</th>
+            <th class="text-left p-3" data-col="2">Marketplace</th>
+            <th class="text-left p-3" data-col="3">Purchase Date</th>
+            <th class="text-left p-3" data-col="4">Order # Market</th>
+            <th class="text-left p-3" data-col="5">Customer</th>
+            <th class="text-left p-3" data-col="6">Ticket Date</th>
+            <th class="text-left p-3" data-col="7">Reason</th>
+            <th class="text-left p-3" data-col="8">Total Price</th>
+            <th class="text-left p-3" data-col="9">Link</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <div class="p-4 border-t flex justify-between items-center">
+      <div class="text-sm text-gray-500">Showing <span id="showingCount">0</span> rows</div>
+      <div class="flex gap-2">
+        <button id="prevPage" class="px-3 py-1 border rounded text-sm disabled:opacity-50">Prev</button>
+        <button id="nextPage" class="px-3 py-1 border rounded text-sm disabled:opacity-50">Next</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SHEET_ID = '16YSrsimWdEB68vc7UTdiD74U3KJX0sinEkYczi7ijis';
+const SHEET_NAME = 'Sheet1';
+const PAGE_SIZE = 20;
+
+let allData = [];
+let filteredData = [];
+let currentPage = 1;
+let sortCol = 0;
+let sortDir = 'desc';
+let charts = {};
+
+// 1. Fetch data from Google Sheets using gviz
+async function loadData() {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
+  const res = await fetch(url);
+  const text = await res.text();
+  const json = JSON.parse(text.substr(47).slice(0, -2)); // strip gviz wrapper
+
+  allData = json.table.rows.map(r => {
+    const c = r.c;
+    return [
+      parseGvizDate(c[0]), // A: Main Return Date
+      c[1]?.v || '', // B: Order number system
+      c[2]?.v || '', // C: Marketplace
+      parseGvizDate(c[3]), // D: Purchase date
+      c[4]?.v || '', // E: Order number marketplace
+      c[5]?.v || '', // F: Customer name
+      parseGvizDate(c[6]), // G: Ticket date
+      c[7]?.v || '', // H: Reason
+      c[8]?.v || '', // I: Total price
+      c[9]?.v || '' // J: Link
+    ];
+  }).filter(row => row[0]); // filter empty rows
+
+  document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString('pl-PL');
+  updateTodayCard();
+  applyFilters();
+}
+
+// Google's gviz returns dates as Date(year,month,day)
+function parseGvizDate(cell) {
+  if (!cell) return '';
+  if (typeof cell.v === 'string') return cell.v;
+  if (cell.f) return cell.f; // formatted value
+  if (typeof cell.v === 'number') return cell.f || '';
+  return '';
+}
+
+// Convert "4/28/2026" or "2026-04-28" to YYYY-MM-DD
+function toISODate(dateStr) {
+  if (!dateStr) return '';
+  if (dateStr.includes('/')) {
+    const [m,d,y] = dateStr.split('/');
+    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+  }
+  if (dateStr.includes('.')) {
+    const [d,m,y] = dateStr.split('.');
+    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+  }
+  return dateStr.substring(0,10);
+}
+
+// 2. Today card using Europe/Warsaw
+function updateTodayCard() {
+  const warsawToday = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Warsaw' }); // YYYY-MM-DD
+  const count = allData.filter(row => toISODate(row[0]) === warsawToday).length;
+  document.getElementById('todayCount').textContent = count;
+  document.getElementById('todayDate').textContent = warsawToday;
+}
+
+// 3. Normalize text for search: lowercase, remove diacritics
+function normalize(text) {
+  return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+// 4. Apply filters
+function applyFilters() {
+  const dateFrom = document.getElementById('dateFrom').value;
+  const dateTo = document.getElementById('dateTo').value;
+  const customer = normalize(document.getElementById('customerFilter').value);
+  const reason = normalize(document.getElementById('reasonSearch').value);
+
+  filteredData = allData.filter(row => {
+    const rowDate = toISODate(row[0]);
+    if (dateFrom && rowDate < dateFrom) return false;
+    if (dateTo && rowDate > dateTo) return false;
+    if (customer &&!normalize(row[5]).includes(customer)) return false;
+    if (reason &&!normalize(row[7]).includes(reason)) return false;
+    return true;
+  });
+
+  currentPage = 1;
+  sortData();
+  renderTable();
+  updateAnalytics();
+  document.getElementById('filteredCount').textContent = filteredData.length;
+}
+
+// 5. Sort
+function sortData() {
+  filteredData.sort((a, b) => {
+    let va = a[sortCol], vb = b[sortCol];
+    // Handle dates and numbers
+    if (sortCol === 0 || sortCol === 3 || sortCol === 6) {
+      va = toISODate(va); vb = toISODate(vb);
+    }
+    if (sortCol === 8) {
+      va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
+    }
+    if (va < vb) return sortDir === 'asc'? -1 : 1;
+    if (va > vb) return sortDir === 'asc'? 1 : -1;
+    return 0;
+  });
+}
+
+// 6. Render table with pagination
+function renderTable() {
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageData = filteredData.slice(start, start + PAGE_SIZE);
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = pageData.map(row => `
+    <tr class="border-b hover:bg-gray-50">
+      <td class="p-3 whitespace-nowrap">${row[0]}</td>
+      <td class="p-3">${row[1]}</td>
+      <td class="p-3">${row[2]}</td>
+      <td class="p-3 whitespace-nowrap">${row[3]}</td>
+      <td class="p-3">${row[4]}</td>
+      <td class="p-3">${row[5]}</td>
+      <td class="p-3 whitespace-nowrap">${row[6]}</td>
+      <td class="p-3 max-w-xs truncate" title="${row[7]}">${row[7]}</td>
+      <td class="p-3">${row[8]}</td>
+      <td class="p-3">${row[9]? `<a href="${row[9]}" target="_blank" class="text-blue-600 underline">Link</a>` : ''}</td>
+    </tr>
+  `).join('');
+
+  const totalPages = Math.ceil(filteredData.length / PAGE_SIZE) || 1;
+  document.getElementById('pageNum').textContent = currentPage;
+  document.getElementById('pageTotal').textContent = totalPages;
+  document.getElementById('showingCount').textContent = `${start + 1}-${Math.min(start + PAGE_SIZE, filteredData.length)} of ${filteredData.length}`;
+  document.getElementById('prevPage').disabled = currentPage === 1;
+  document.getElementById('nextPage').disabled = currentPage === totalPages;
+
+  // Update sort indicators
+  document.querySelectorAll('th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+  document.querySelector(`th[data-col="${sortCol}"]`).classList.add(sortDir === 'asc'? 'sort-asc' : 'sort-desc');
+}
+
+// 7. Analytics charts
+function updateAnalytics() {
+  // Top reasons
+  const reasons = {};
+  filteredData.forEach(r => {
+    const key = r[7].trim() || 'Unknown';
+    reasons[key] = (reasons[key] || 0) + 1;
+  });
+  const topReasons = Object.entries(reasons).sort((a,b) => b[1]-a[1]).slice(0,5);
+
+  // Top marketplaces
+  const markets = {};
+  filteredData.forEach(r => {
+    const key = r[2].trim() || 'Unknown';
+    markets[key] = (markets[key] || 0) + 1;
+  });
+  const topMarkets = Object.entries(markets).sort((a,b) => b[1]-a[1]).slice(0,5);
+
+  // Trend by date
+  const trend = {};
+  filteredData.forEach(r => {
+    const d = toISODate(r[0]);
+    if (d) trend[d] = (trend[d] || 0) + 1;
+  });
+  const trendDates = Object.keys(trend).sort().slice(-14); // last 14 days
+
+  renderChart('reasonsChart', 'bar', topReasons.map(e=>e[0]), topReasons.map(e=>e[1]));
+  renderChart('marketplaceChart', 'doughnut', topMarkets.map(e=>e[0]), topMarkets.map(e=>e[1]));
+  renderChart('trendChart', 'line', trendDates, trendDates.map(d=>trend[d]));
+}
+
+function renderChart(id, type, labels, data) {
+  if (charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id);
+  charts[id] = new Chart(ctx, {
+    type: type,
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        backgroundColor: ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6'],
+        borderColor: type === 'line'? '#3b82f6' : undefined,
+        tension: 0.3,
+        fill: false
+      }]
+    },
+    options: {
+      plugins: { legend: { display: type!== 'line' } },
+      scales: type === 'line'? { y: { beginAtZero: true } } : {},
+      maintainAspectRatio: false
+    }
+  });
+}
+
+// Event listeners
+document.getElementById('applyFilters').onclick = applyFilters;
+document.getElementById('resetFilters').onclick = () => {
+  document.getElementById('dateFrom').value = '';
+  document.getElementById('dateTo').value = '';
+  document.getElementById('customerFilter').value = '';
+  document.getElementById('reasonSearch').value = '';
+  applyFilters();
+};
+document.getElementById('prevPage').onclick = () => { currentPage--; renderTable(); };
+document.getElementById('nextPage').onclick = () => { currentPage++; renderTable(); };
+document.querySelectorAll('th').forEach(th => {
+  th.onclick = () => {
+    const col = parseInt(th.dataset.col);
+    if (sortCol === col) sortDir = sortDir === 'asc'? 'desc' : 'asc';
+    else { sortCol = col; sortDir = 'asc'; }
+    sortData(); renderTable();
+  };
+});
+
+// Init
+loadData();
+</script>
+</body>
+</html>
