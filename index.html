@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Returns Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/papaparse/5.3.2/papaparse.min.js"></script>
+    <style>
+        .loading-overlay {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(4px);
+        }
+        /* Custom scrollbar for mobile table */
+        .table-container::-webkit-scrollbar {
+            height: 6px;
+        }
+        .table-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans">
+
+    <!-- Loading Overlay -->
+    <div id="loading" class="fixed inset-0 z-50 flex items-center justify-center loading-overlay">
+        <div class="flex flex-col items-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p class="mt-3 text-slate-600 font-medium">Loading Data...</p>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 py-6 md:py-10">
+        
+        <!-- Header -->
+        <header class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800">Returns Management</h1>
+                <p class="text-slate-500 text-sm">Real-time tracking from Google Sheets</p>
+            </div>
+            <div id="todayDateDisplay" class="text-sm font-medium bg-white px-3 py-1 rounded-full border border-slate-200 text-slate-600">
+                <!-- Date injected here -->
+            </div>
+        </header>
+
+        <!-- Dashboard Summary Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <p class="text-slate-500 text-xs uppercase font-bold tracking-wider">Returns Today</p>
+                <h2 id="todayCount" class="text-4xl font-extrabold text-blue-600 mt-1">0</h2>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <p class="text-slate-500 text-xs uppercase font-bold tracking-wider">Filtered Results</p>
+                <h2 id="filteredCount" class="text-4xl font-extrabold text-slate-800 mt-1">0</h2>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <p class="text-slate-500 text-xs uppercase font-bold tracking-wider">Total Returns (All)</p>
+                <h2 id="totalCount" class="text-4xl font-extrabold text-slate-800 mt-1">0</h2>
+            </div>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Date From</label>
+                    <input type="date" id="dateFrom" class="w-full p-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Date To</label>
+                    <input type="date" id="dateTo" class="w-full p-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Customer Name</label>
+                    <input type="text" id="customerSearch" placeholder="Search name..." class="w-full p-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Reason (Keyword)</label>
+                    <input type="text" id="reasonSearch" placeholder="e.g. 'screen'..." class="w-full p-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+            <div class="mt-4 flex justify-end">
+                <button onclick="resetFilters()" class="text-sm text-blue-600 hover:underline font-medium">Reset Filters</button>
+            </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                <h3 class="text-sm font-bold text-slate-700 mb-4">Top Return Reasons</h3>
+                <canvas id="reasonsChart"></canvas>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                <h3 class="text-sm font-bold text-slate-700 mb-4">Marketplace Split</h3>
+                <canvas id="marketChart"></canvas>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                <h3 class="text-sm font-bold text-slate-700 mb-4">Return Trend</h3>
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Table Section -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="table-container overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 border-b border-slate-100">
+                        <tr>
+                            <th class="p-4 text-xs font-bold text-slate-500 uppercase cursor-pointer hover:text-blue-600 transition" onclick="setSort('A')">Arrival Date ↕</th>
+                            <th class="p-4 text-xs font-bold text-slate-500 uppercase">System ID</th>
+                            <th class="p-4 text-xs font-bold text-slate-500 uppercase cursor-pointer hover:text-blue-600 transition" onclick="setSort('C')">Marketplace ↕</th>
+                            <th class="p-4 text-xs font-bold text-slate-500 uppercase">Purchase Date</th>
+                            <th class="p-4 text-xs font-bold text-slate-500 uppercase">MP Order #</th>
+                            <th class="p-4 text-xs font-bold text-slate-500 uppercase cursor-pointer hover:text-blue-600 transition" onclick="setSort('F')">Customer ↕</th>
+                            <th class="p-4 text-xs font-bold text-slate-500 uppercase">Claim Date</th>
+                            <th class="p-4 text-xs font-bold text-slate-500 uppercase">Reason</th>
+                            <th class="p-4 text-xs font-bold text-slate-500 uppercase">Price</th>
+                            <th class="p-4 text-xs font-bold text-slate-500 uppercase">Link</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-100 text-sm">
+                        <!-- Rows injected here -->
+                    </tbody>
+                </table>
+            </div>
+            <!-- Pagination -->
+            <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                <span id="paginationInfo" class="text-xs text-slate-500 font-medium">Showing 0 of 0</span>
+                <div class="flex gap-2">
+                    <button id="prevBtn" onclick="changePage(-1)" class="px-3 py-1 bg-white border border-slate-200 rounded text-xs font-semibold hover:bg-slate-50 disabled:opacity-50">Prev</button>
+                    <button id="nextBtn" onclick="changePage(1)" class="px-3 py-1 bg-white border border-slate-200 rounded text-xs font-semibold hover:bg-slate-50 disabled:opacity-50">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SHEET_ID = '16YSrsimWdEB68vc7UTdiD74U3KJX0sinEkYczi7ijis';
+        const GID = '1477917764';
+        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
+
+        let rawData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        const rowsPerPage = 15;
+        let sortCol = 'A'; 
+        let sortAsc = false;
+
+        let charts = {};
+
+        async function init() {
+            try {
+                const response = await fetch(CSV_URL);
+                const csvText = await response.text();
+                
+                Papa.parse(csvText, {
+                    header: false, // Using indexes to ensure Column A, B... mapping
+                    skipEmptyLines: true,
+                    complete: (results) => {
+                        // Skip the header row from the sheet
+                        rawData = results.data.slice(1).map((row, idx) => ({
+                            id: idx,
+                            A: row[0] || '', // Return Date
+                            B: row[1] || '', // Sys Order #
+                            C: row[2] || '', // Marketplace
+                            D: row[3] || '', // Purchase Date
+                            E: row[4] || '', // MP Order #
+                            F: row[5] || '', // Customer Name
+                            G: row[6] || '', // Claim Date
+                            H: row[7] || '', // Reason
+                            I: row[8] || '', // Price
+                            J: row[9] || '', // Link
+                        }));
+                        
+                        setupTimezone();
+                        applyFilters();
+                        document.getElementById('loading').classList.add('hidden');
+                    }
+                });
+            } catch (error) {
+                alert("Error loading data. Please ensure the sheet is public.");
+                console.error(error);
+            }
+        }
+
+        function setupTimezone() {
+            // Format current date for Warsaw
+            const now = new Date();
+            const options = { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit' };
+            const WarsawDateStr = new Intl.DateTimeFormat('en-GB', options).format(now); // DD/MM/YYYY
+            document.getElementById('todayDateDisplay').innerText = `Warsaw Today: ${WarsawDateStr}`;
+            return WarsawDateStr;
+        }
+
+        function normalizeDate(dateStr) {
+            if (!dateStr) return '';
+            // Handles common sheet formats: YYYY-MM-DD or DD/MM/YYYY
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return dateStr;
+            return date.toISOString().split('T')[0];
+        }
+
+        function applyFilters() {
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            const customerSearch = document.getElementById('customerSearch').value.toLowerCase().trim();
+            const reasonSearch = document.getElementById('reasonSearch').value.toLowerCase().trim();
+            
+            // Get Warsaw today string (YYYY-MM-DD)
+            const todayWarsaw = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw' }).format(new Date());
+
+            filteredData = rawData.filter(row => {
+                const rowDate = normalizeDate(row.A);
+                const customerMatch = row.F.toLowerCase().includes(customerSearch);
+                const reasonMatch = row.H.toLowerCase().includes(reasonSearch);
+                
+                let dateMatch = true;
+                if (dateFrom && rowDate < dateFrom) dateMatch = false;
+                if (dateTo && rowDate > dateTo) dateMatch = false;
+
+                return customerMatch && reasonMatch && dateMatch;
+            });
+
+            // Sort data
+            filteredData.sort((a, b) => {
+                let valA = a[sortCol].toLowerCase();
+                let valB = b[sortCol].toLowerCase();
+                if (valA < valB) return sortAsc ? -1 : 1;
+                if (valA > valB) return sortAsc ? 1 : -1;
+                return 0;
+            });
+
+            // Summary Stats
+            const todayReturns = rawData.filter(row => normalizeDate(row.A) === todayWarsaw).length;
+            document.getElementById('todayCount').innerText = todayReturns;
+            document.getElementById('filteredCount').innerText = filteredData.length;
+            document.getElementById('totalCount').innerText = rawData.length;
+
+            updateCharts();
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const pageData = filteredData.slice(start, end);
+
+            pageData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition cursor-default";
+                tr.innerHTML = `
+                    <td class="p-4 font-medium">${row.A}</td>
+                    <td class="p-4">${row.B}</td>
+                    <td class="p-4"><span class="px-2 py-1 bg-slate-100 rounded text-xs font-semibold">${row.C}</span></td>
+                    <td class="p-4">${row.D}</td>
+                    <td class="p-4">${row.E}</td>
+                    <td class="p-4">${row.F}</td>
+                    <td class="p-4">${row.G}</td>
+                    <td class="p-4 text-slate-600">${row.H}</td>
+                    <td class="p-4 font-semibold">${row.I}</td>
+                    <td class="p-4">
+                        ${row.J ? `<a href="${row.J}" target="_blank" class="text-blue-600 hover:underline text-xs font-bold">Open ↗</a>` : '-'}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('paginationInfo').innerText = `Showing ${start + 1} to ${Math.min(end, filteredData.length)} of ${filteredData.length}`;
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = end >= filteredData.length;
+        }
+
+        function changePage(dir) {
+            currentPage += dir;
+            renderTable();
+        }
+
+        function setSort(col) {
+            if (sortCol === col) sortAsc = !sortAsc;
+            else {
+                sortCol = col;
+                sortAsc = true;
+            }
+            applyFilters();
+        }
+
+        function resetFilters() {
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            document.getElementById('customerSearch').value = '';
+            document.getElementById('reasonSearch').value = '';
+            applyFilters();
+        }
+
+        function updateCharts() {
+            // Prepare data for Top Reasons (Column H)
+            const reasonsMap = {};
+            const marketMap = {};
+            const trendMap = {};
+
+            filteredData.forEach(row => {
+                reasonsMap[row.H] = (reasonsMap[row.H] || 0) + 1;
+                marketMap[row.C] = (marketMap[row.C] || 0) + 1;
+                const d = normalizeDate(row.A);
+                if(d) trendMap[d] = (trendMap[d] || 0) + 1;
+            });
+
+            const topReasons = Object.entries(reasonsMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            const topMarkets = Object.entries(marketMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            const trendLabels = Object.keys(trendMap).sort();
+            const trendValues = trendLabels.map(l => trendMap[l]);
+
+            createChart('reasonsChart', 'bar', topReasons.map(x => x[0]), topReasons.map(x => x[1]), 'Returns', '#3b82f6');
+            createChart('marketChart', 'doughnut', topMarkets.map(x => x[0]), topMarkets.map(x => x[1]), 'Volume', ['#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe']);
+            createChart('trendChart', 'line', trendLabels, trendValues, 'Count', '#3b82f6', true);
+        }
+
+        function createChart(id, type, labels, data, label, color, isLine = false) {
+            if (charts[id]) charts[id].destroy();
+            const ctx = document.getElementById(id).getContext('2d');
+            
+            charts[id] = new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        backgroundColor: color,
+                        borderColor: isLine ? color : 'transparent',
+                        borderWidth: 2,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: type === 'doughnut' } },
+                    scales: type === 'doughnut' ? {} : {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // Event Listeners for live filtering
+        document.getElementById('dateFrom').addEventListener('change', applyFilters);
+        document.getElementById('dateTo').addEventListener('change', applyFilters);
+        document.getElementById('customerSearch').addEventListener('input', applyFilters);
+        document.getElementById('reasonSearch').addEventListener('input', applyFilters);
+
+        window.onload = init;
+    </script>
+</body>
+</html>
